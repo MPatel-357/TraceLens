@@ -1,0 +1,25 @@
+# Python
+backend/venv/
+backend/.venv/
+__pycache__/
+*.pyc
+
+# Environment variables / secrets
+.env
+*.env
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# Frontend
+node_modules/
+dist/
