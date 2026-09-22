@@ -17,6 +17,7 @@ from app.incident_analyzer import (
     analyze_incident,
 )
 from dotenv import load_dotenv
+from fastapi.middleware.cors import CORSMiddleware
 
 load_dotenv()
 
@@ -178,3 +179,11 @@ def analyze_incident_endpoint(
             status_code=400,
             detail="Invalid timestamp format"
         )
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
