@@ -1,4 +1,9 @@
 from collections import Counter
+import json
+
+from openai import OpenAI
+
+client = OpenAI()
 
 
 def build_incident_prompt(logs: list[dict]) -> str:
@@ -19,8 +24,11 @@ def build_incident_prompt(logs: list[dict]) -> str:
     return f"""
 You are analyzing an application incident detected by an anomaly-detection system.
 
-Your job is to identify plausible explanations based ONLY on the supplied log evidence.
-Do not claim certainty when the logs do not prove a root cause.
+Analyze the incident using ONLY the supplied log evidence.
+
+Do not invent infrastructure details.
+Do not claim certainty when the logs do not prove the root cause.
+Clearly distinguish observations from hypotheses.
 
 Incident summary:
 Total logs: {len(logs)}
@@ -30,13 +38,39 @@ Services involved: {dict(services)}
 Relevant logs:
 {formatted_logs}
 
-Return an incident analysis containing:
+Return ONLY valid JSON with this structure:
 
-1. Likely cause
-2. Evidence from the logs
-3. Affected services
-4. Recommended debugging checks
-5. Confidence level
-
-Clearly distinguish observed evidence from hypotheses.
+{{
+    "summary": "brief incident summary",
+    "likely_cause": "most plausible explanation based on the evidence",
+    "evidence": [
+        "specific observation from the logs"
+    ],
+    "affected_services": [
+        "service name"
+    ],
+    "recommended_checks": [
+        "specific debugging step"
+    ],
+    "confidence": "low, medium, or high"
+}}
 """.strip()
+
+
+def analyze_incident(logs: list[dict]) -> dict:
+    prompt = build_incident_prompt(logs)
+
+    response = client.responses.create(
+        model="gpt-5-mini",
+        input=prompt
+    )
+
+    output = response.output_text.strip()
+
+    if output.startswith("```"):
+        output = output.removeprefix("```json")
+        output = output.removeprefix("```")
+        output = output.removesuffix("```")
+        output = output.strip()
+
+    return json.loads(output)

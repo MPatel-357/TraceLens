@@ -1,3 +1,7 @@
+from dotenv import load_dotenv
+
+load_dotenv()
+
 from fastapi import Depends, FastAPI, HTTPException
 from sqlalchemy.orm import Session
 
@@ -5,14 +9,16 @@ from app.database import Base, engine, get_db
 from app.db_models import LogRecord
 from app.models import LogEvent, RawLog
 from app.parser import parse_log_line
-
 from app.analytics import get_log_summary
-
 from app.anomaly import detect_anomalies
-
 from app.incident_context import get_incident_logs
+from app.incident_analyzer import (
+    build_incident_prompt,
+    analyze_incident,
+)
+from dotenv import load_dotenv
 
-from app.incident_analyzer import build_incident_prompt
+load_dotenv()
 
 
 Base.metadata.create_all(bind=engine)
@@ -137,6 +143,34 @@ def incident_prompt(
             "anomaly_timestamp": timestamp,
             "log_count": len(logs),
             "prompt": prompt
+        }
+
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid timestamp format"
+        )
+
+@app.get("/incidents/analyze")
+def analyze_incident_endpoint(
+    timestamp: str,
+    db: Session = Depends(get_db)
+):
+    try:
+        logs = get_incident_logs(db, timestamp)
+
+        if not logs:
+            raise HTTPException(
+                status_code=404,
+                detail="No logs found for this incident window"
+            )
+
+        analysis = analyze_incident(logs)
+
+        return {
+            "anomaly_timestamp": timestamp,
+            "log_count": len(logs),
+            "analysis": analysis
         }
 
     except ValueError:
